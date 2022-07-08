@@ -36,7 +36,7 @@ class Tools:
     @staticmethod
     def is_file(filename):
         return os.path.isfile(filename)
-    
+
 class Path:
     gt_cases = 'apps_dataset/APPS/APPS/test/{task_no}/input_output.json'
     cano_solutions = 'apps_dataset/APPS/APPS/test/{task_no}/solutions.json'
@@ -63,6 +63,15 @@ class Variables:
     ]
 
 class Parser:
+    @staticmethod
+    def find_ones_without_notion(questions):
+        for question, task_no in questions:
+            found_notions = re.findall(r'\n(-----.*?-----)\n', question)
+            if len(found_notions) == 0:
+            #     ipdb.set_trace()
+            # if '-----' not in question:
+                print(task_no)
+    
     @staticmethod
     def get_all_notions(questions):
         notions = set()
@@ -105,11 +114,23 @@ class Parser:
     @staticmethod
     def build_test_code(intput_output):
         test_code = '\ndef check(candidate):\n'
-        inputs = intput_output['inputs']
-        outputs = intput_output['outputs']
+        raw_inputs = intput_output['inputs']
+        raw_outputs = intput_output['outputs']
         
-        if type(inputs[0]) != str:
-            return ('', '')
+        inputs = []
+        for input in raw_inputs:
+            if isinstance(input, str):
+                inputs.append(input)
+            else:
+                inputs.append(str([input])[1:-1])
+        
+        outputs = []
+        for output in raw_outputs:
+            if isinstance(output, str):
+                outputs.append(output)
+            else:
+                outputs.append(str([output])[1:-1])
+
         example_io = '\n-----Sample Input-----\n'
         example_io += inputs[0].strip() + '\n'
         example_io += '\n-----Sample Output-----\n' + outputs[0].strip() + '\n'
@@ -117,7 +138,7 @@ class Parser:
         for idx, input in enumerate(inputs):
             test_code += '    assert candidate({}) == {}\n'.format(str([input.strip()])[1:-1], str([outputs[idx].strip()])[1:-1])
         return test_code, example_io
-    
+
 if __name__ == '__main__':
     tasks_to_skip = []
     
@@ -125,8 +146,8 @@ if __name__ == '__main__':
     meta_datas = dict()
     for task_no in Tools.explore_dir('apps_dataset/APPS/APPS/test'):
         meta_data = Tools.read_json(Path.meta_data.format(task_no=task_no))
-        if meta_data['difficulty'] != 'introductory':
-            tasks_to_skip.append(task_no)
+        # if meta_data['difficulty'] != 'introductory':
+        #     tasks_to_skip.append(task_no)
         meta_datas[task_no] = meta_data
 
     # read all gt cases
@@ -134,8 +155,8 @@ if __name__ == '__main__':
     examples = dict()
     for task_no in Tools.explore_dir('apps_dataset/APPS/APPS/test'):
         test_code, example_io = Parser.build_test_code(Tools.read_json(Path.gt_cases.format(task_no=task_no)))
-        if len(test_code) < 1:
-            tasks_to_skip.append(task_no)
+        # if len(test_code) < 1:
+        #     tasks_to_skip.append(task_no)
         tests[task_no] = test_code
         examples[task_no] = example_io
     
@@ -158,6 +179,7 @@ if __name__ == '__main__':
         record = {
             'task_id': f'APPSEval/{task_no}',
             'entry_point': 'solution',
+            # 'prompt': prompt,
             'prompt': prompt + '    pass\n\n# check the correctness of solution\nassert ',
             'test': test,
             'meta_data': meta_data,
