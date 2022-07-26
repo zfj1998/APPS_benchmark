@@ -139,15 +139,15 @@ class Parser:
             test_code += '    assert candidate({}) == {}\n'.format(str([input.strip()])[1:-1], str([outputs[idx].strip()])[1:-1])
         return test_code, example_io
 
-if __name__ == '__main__':
+def build_dataset():
     tasks_to_skip = []
     
     # read all meta data
     meta_datas = dict()
     for task_no in Tools.explore_dir('apps_dataset/APPS/APPS/test'):
         meta_data = Tools.read_json(Path.meta_data.format(task_no=task_no))
-        # if meta_data['difficulty'] != 'introductory':
-        #     tasks_to_skip.append(task_no)
+        if meta_data['difficulty'] != 'introductory':
+            tasks_to_skip.append(task_no)
         meta_datas[task_no] = meta_data
 
     # read all gt cases
@@ -188,3 +188,17 @@ if __name__ == '__main__':
         records.append(record)
 
     Tools.write_jsonl('apps_hme_for_test_case_gen.jsonl', records)
+
+def extract_first_gt():
+    examples = dict()
+    for task_no in Tools.explore_dir('apps_dataset/APPS/APPS/test'):
+        example_io = Tools.read_json(Path.gt_cases.format(task_no=task_no))
+        inputs = example_io['inputs'][:3]
+        outputs = example_io['outputs'][:3]
+        examples[f'APPSEval/{task_no}'] = (inputs, outputs)
+    
+    Tools.write_json('apps_dataset/apps_intro_first_3_gt_test_cases.json', examples)
+
+if __name__ == '__main__':
+    # build_dataset()
+    extract_first_gt()
